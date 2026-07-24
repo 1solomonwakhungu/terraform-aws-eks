@@ -1,5 +1,8 @@
 # EKS Module
 
+[![Terraform CI](https://github.com/1solomonwakhungu/terraform-aws-eks/actions/workflows/terraform.yml/badge.svg?branch=main)](https://github.com/1solomonwakhungu/terraform-aws-eks/actions/workflows/terraform.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A production-grade Terraform module for creating AWS EKS clusters with managed node groups.
 
 ## Features
