@@ -1,5 +1,8 @@
 # EKS Module
 
+[![Terraform CI](https://github.com/1solomonwakhungu/terraform-aws-eks/actions/workflows/terraform.yml/badge.svg?branch=main)](https://github.com/1solomonwakhungu/terraform-aws-eks/actions/workflows/terraform.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A production-grade Terraform module for creating AWS EKS clusters with managed node groups.
 
 ## Features
@@ -9,7 +12,8 @@ A production-grade Terraform module for creating AWS EKS clusters with managed n
 - IAM roles and policies for cluster and node groups
 - Security group for cluster control plane
 - Control plane logging to CloudWatch
-- Optional cluster autoscaler IAM policy
+- KMS encryption for Kubernetes secrets
+- Optional least-privilege cluster autoscaler Pod Identity
 - Consistent tagging across all resources
 
 ## Usage
@@ -19,11 +23,11 @@ module "eks" {
   source = "./modules/eks"
 
   name                = "production-eks"
-  kubernetes_version  = "1.29"
+  kubernetes_version  = "1.34"
   vpc_id              = module.vpc.vpc_id
   subnet_ids          = module.vpc.private_subnet_ids
 
-  cluster_endpoint_public_access = true
+  cluster_endpoint_public_access = false
   cluster_endpoint_public_access_cidrs = ["10.0.0.0/8"]
 
   enable_cluster_autoscaler = true
@@ -55,7 +59,7 @@ module "eks" {
 
 | Name | Version |
 |------|---------|
-| terraform | >= 1.0 |
+| terraform | >= 1.3 |
 | aws | >= 5.0 |
 
 ## Providers
@@ -69,14 +73,18 @@ module "eks" {
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|----------|
 | name | Name prefix for all EKS resources | `string` | `"my-eks"` | No |
-| kubernetes_version | Kubernetes version for the EKS cluster | `string` | `"1.29"` | No |
+| kubernetes_version | Kubernetes version for the EKS cluster | `string` | `"1.34"` | No |
 | vpc_id | ID of the VPC where the EKS cluster will be deployed | `string` | n/a | Yes |
 | subnet_ids | List of subnet IDs for the EKS cluster | `list(string)` | n/a | Yes |
-| cluster_endpoint_public_access | Whether the cluster API endpoint is publicly accessible | `bool` | `true` | No |
-| cluster_endpoint_public_access_cidrs | List of CIDR blocks allowed to access the public cluster endpoint | `list(string)` | `["0.0.0.0/0"]` | No |
+| cluster_endpoint_public_access | Whether the cluster API endpoint is publicly accessible | `bool` | `false` | No |
+| cluster_endpoint_public_access_cidrs | List of CIDR blocks allowed to access the public cluster endpoint | `list(string)` | `["10.0.0.0/8"]` | No |
+| cluster_security_group_ingress_cidrs | CIDRs allowed to reach the private control-plane security group | `list(string)` | `[]` | No |
+| cluster_security_group_egress_cidrs | CIDRs the custom control-plane security group may reach | `list(string)` | `[]` | No |
 | cluster_enabled_log_types | List of control plane log types to enable | `list(string)` | `["api", "audit", "authenticator", "controllerManager", "scheduler"]` | No |
 | node_groups | Map of managed node group configurations | `map(object)` | `{ general = { ... } }` | No |
-| enable_cluster_autoscaler | Whether to create IAM policy for cluster autoscaler | `bool` | `false` | No |
+| enable_cluster_autoscaler | Whether to create cluster autoscaler Pod Identity resources | `bool` | `false` | No |
+| cluster_autoscaler_namespace | Namespace containing the autoscaler service account | `string` | `"kube-system"` | No |
+| cluster_autoscaler_service_account | Service account used by cluster autoscaler | `string` | `"cluster-autoscaler"` | No |
 | tags | Additional tags to apply to all resources | `map(string)` | `{}` | No |
 
 ## Outputs
@@ -94,3 +102,4 @@ module "eks" {
 | node_group_iam_role_name | IAM role name of the node groups |
 | node_group_names | Names of the created node groups |
 | cluster_autoscaler_policy_arn | ARN of the cluster autoscaler IAM policy (if enabled) |
+| cluster_autoscaler_role_arn | ARN of the cluster autoscaler Pod Identity role (if enabled) |
