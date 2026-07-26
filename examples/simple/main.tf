@@ -9,10 +9,10 @@ provider "aws" {
 # }
 
 module "eks" {
-  source = "../"
+  source = "../.."
 
   name               = "example-eks"
-  kubernetes_version = "1.29"
+  kubernetes_version = "1.34"
   vpc_id             = "vpc-12345678"
   subnet_ids         = ["subnet-aaa", "subnet-bbb", "subnet-ccc"]
 

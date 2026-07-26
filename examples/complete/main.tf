@@ -4,9 +4,9 @@
 # Provisions a production-style EKS cluster composed with the companion VPC
 # module:
 #   - Dedicated VPC with private subnets for the cluster
-#   - EKS control plane with private + restricted-public API access
+#   - EKS control plane with private API access
 #   - Two managed node groups: on-demand "general" and cost-saving "spot"
-#   - Cluster autoscaler IAM policy enabled
+#   - Cluster autoscaler Pod Identity enabled
 # =============================================================================
 
 terraform {
@@ -46,13 +46,13 @@ module "eks" {
   source = "../../"
 
   name               = "eks-prod"
-  kubernetes_version = "1.29"
+  kubernetes_version = "1.34"
 
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnet_ids
 
   # Restrict the public API endpoint to the corporate CIDR range.
-  cluster_endpoint_public_access       = true
+  cluster_endpoint_public_access       = false
   cluster_endpoint_public_access_cidrs = ["10.0.0.0/8"]
 
   cluster_enabled_log_types = ["api", "audit", "authenticator"]

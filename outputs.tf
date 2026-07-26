@@ -53,3 +53,8 @@ output "cluster_autoscaler_policy_arn" {
   description = "ARN of the cluster autoscaler IAM policy (if enabled)"
   value       = var.enable_cluster_autoscaler ? aws_iam_policy.cluster_autoscaler[0].arn : null
 }
+
+output "cluster_autoscaler_role_arn" {
+  description = "ARN of the cluster autoscaler Pod Identity role (if enabled)"
+  value       = var.enable_cluster_autoscaler ? aws_iam_role.cluster_autoscaler[0].arn : null
+}

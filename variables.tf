@@ -7,7 +7,7 @@ variable "name" {
 variable "kubernetes_version" {
   description = "Kubernetes version for the EKS cluster"
   type        = string
-  default     = "1.29"
+  default     = "1.34"
 }
 
 variable "vpc_id" {
@@ -23,13 +23,25 @@ variable "subnet_ids" {
 variable "cluster_endpoint_public_access" {
   description = "Whether the cluster API endpoint is publicly accessible"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "cluster_endpoint_public_access_cidrs" {
   description = "List of CIDR blocks allowed to access the public cluster endpoint"
   type        = list(string)
-  default     = ["0.0.0.0/0"]
+  default     = ["10.0.0.0/8"]
+}
+
+variable "cluster_security_group_ingress_cidrs" {
+  description = "CIDR blocks allowed to reach the private cluster control-plane security group on port 443"
+  type        = list(string)
+  default     = []
+}
+
+variable "cluster_security_group_egress_cidrs" {
+  description = "CIDR blocks the custom control-plane security group may reach; leave empty to rely on the EKS-managed cluster security group"
+  type        = list(string)
+  default     = []
 }
 
 variable "cluster_enabled_log_types" {
@@ -61,9 +73,21 @@ variable "node_groups" {
 }
 
 variable "enable_cluster_autoscaler" {
-  description = "Whether to create IAM policy for cluster autoscaler"
+  description = "Whether to create a least-privilege EKS Pod Identity role and association for cluster autoscaler"
   type        = bool
   default     = false
+}
+
+variable "cluster_autoscaler_namespace" {
+  description = "Kubernetes namespace containing the cluster autoscaler service account"
+  type        = string
+  default     = "kube-system"
+}
+
+variable "cluster_autoscaler_service_account" {
+  description = "Kubernetes service account used by cluster autoscaler"
+  type        = string
+  default     = "cluster-autoscaler"
 }
 
 variable "tags" {
