@@ -34,5 +34,12 @@ jobs:
       - name: Validate configuration
         run: terraform validate -no-color
 
+      - name: Validate examples
+        run: |
+          terraform -chdir=examples/simple init -backend=false -input=false
+          terraform -chdir=examples/simple validate -no-color
+          terraform -chdir=examples/complete init -backend=false -input=false
+          terraform -chdir=examples/complete validate -no-color
+
       - name: Run native tests
         run: terraform test -no-color

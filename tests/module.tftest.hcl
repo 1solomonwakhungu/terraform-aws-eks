@@ -15,12 +15,25 @@ override_resource {
   }
 }
 
+override_resource {
+  target          = aws_eks_node_group.this
+  override_during = plan
+
+  values = {
+    resources = [{
+      autoscaling_groups = [{
+        name = "per237-workers"
+      }]
+    }]
+  }
+}
+
 run "plans_cluster_and_node_groups" {
   command = plan
 
   variables {
     name               = "per237-eks"
-    kubernetes_version = "1.29"
+    kubernetes_version = "1.34"
     vpc_id             = "vpc-0123456789abcdef0"
 
     subnet_ids = [
@@ -30,6 +43,7 @@ run "plans_cluster_and_node_groups" {
 
     cluster_endpoint_public_access       = true
     cluster_endpoint_public_access_cidrs = ["198.51.100.0/24"]
+    cluster_security_group_ingress_cidrs = ["10.0.0.0/8"]
     cluster_enabled_log_types            = ["api", "audit"]
     enable_cluster_autoscaler            = true
 
@@ -63,7 +77,7 @@ run "plans_cluster_and_node_groups" {
   }
 
   assert {
-    condition     = aws_eks_cluster.this.version == "1.29"
+    condition     = aws_eks_cluster.this.version == "1.34"
     error_message = "The EKS cluster must use the requested Kubernetes version."
   }
 
@@ -79,6 +93,14 @@ run "plans_cluster_and_node_groups" {
   assert {
     condition     = aws_cloudwatch_log_group.cluster.retention_in_days == 30
     error_message = "Control-plane logs must be retained for 30 days."
+  }
+
+  assert {
+    condition = (
+      aws_kms_key.cluster_secrets.enable_key_rotation &&
+      one(aws_eks_cluster.this.encryption_config).resources == toset(["secrets"])
+    )
+    error_message = "Kubernetes secrets must use a rotating KMS key."
   }
 
   assert {
@@ -115,8 +137,29 @@ run "plans_cluster_and_node_groups" {
   }
 
   assert {
-    condition     = contains(jsondecode(aws_iam_policy.cluster_autoscaler[0].policy).Statement[0].Action, "autoscaling:SetDesiredCapacity")
-    error_message = "The autoscaler policy must permit adjusting desired capacity."
+    condition = (
+      contains(jsondecode(aws_iam_policy.cluster_autoscaler[0].policy).Statement[1].Action, "autoscaling:SetDesiredCapacity") &&
+      jsondecode(aws_iam_policy.cluster_autoscaler[0].policy).Statement[1].Condition.StringEquals["autoscaling:ResourceTag/k8s.io/cluster-autoscaler/per237-eks"] == "owned"
+    )
+    error_message = "The autoscaler may mutate only auto scaling groups tagged for this cluster."
+  }
+
+  assert {
+    condition = (
+      jsondecode(aws_iam_role.cluster_autoscaler[0].assume_role_policy).Statement[0].Principal.Service == "pods.eks.amazonaws.com" &&
+      aws_eks_pod_identity_association.cluster_autoscaler[0].service_account == "cluster-autoscaler"
+    )
+    error_message = "Cluster autoscaler must use a dedicated EKS Pod Identity role."
+  }
+
+  assert {
+    condition     = length(aws_autoscaling_group_tag.cluster_autoscaler) == 4
+    error_message = "Every managed node group must receive both autoscaler discovery tags."
+  }
+
+  assert {
+    condition     = toset(one(aws_security_group.cluster.ingress).cidr_blocks) == toset(["10.0.0.0/8"])
+    error_message = "The control-plane security group must allow only explicitly configured CIDRs."
   }
 
   assert {
